@@ -5,3 +5,9 @@
 /.vs
 /WadnereJwellors/bin/Debug/net8.0
 /WadnereJwellors/obj
+/WadnereJwellors.Business/bin/Debug/net8.0
+/WadnereJwellors.Business/obj
+/WadnereJwellors.DataAccess/bin/Debug/net8.0
+/WadnereJwellors.DataAccess/obj
+/WadnereJwellors.Domain/bin/Debug/net8.0
+/WadnereJwellors.Domain/obj
