@@ -25,6 +25,8 @@ namespace WadnereJwellors.Controllers
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
             })
             .ToArray();
+
+            //new changes 
         }
     }
 }
