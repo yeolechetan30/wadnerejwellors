@@ -11,6 +11,7 @@ namespace WadnereJwellors.DataAccess.Context
         }
 
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<UserRegistration> UserRegistrations { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,6 +23,24 @@ namespace WadnereJwellors.DataAccess.Context
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
+            });
+
+            modelBuilder.Entity<UserRegistration>(entity =>
+            {
+                entity.ToTable("UserRegistration");
+                entity.HasKey(e => e.RegistrationId);
+                entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.EmailAddress).HasMaxLength(150);
+                entity.Property(e => e.MobileNumber).IsRequired();
+                entity.Property(e => e.PasswordHash).IsRequired();
+                entity.Property(e => e.AddressLine1).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.AddressLine2).HasMaxLength(100);
+                entity.Property(e => e.Village_City).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Taluka).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.District).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.State).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Pincode).IsRequired().HasMaxLength(10);
             });
         }
     }

@@ -11,5 +11,10 @@ namespace WadnereJwellors.DataAccess.Repositories
         Task<User> AddAsync(User user);
         Task UpdateAsync(User user);
         Task DeleteAsync(int id);
+
+        Task<UserRegistration> AddRegistrationAsync(UserRegistration registration);
+        Task UpdateRegistrationAsync(UserRegistration registration);
+        Task<UserRegistration> GetByRegistrationIdAsync(int id);
+        Task<IEnumerable<UserRegistration>> GetAllRegisterUserAsync();
     }
 }

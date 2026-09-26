@@ -10,42 +10,54 @@ namespace WadnereJwellors.DataAccess.Repositories
     {
         private readonly ApplicationDbContext _context;
 
-        public UserRepository(ApplicationDbContext context)
-        {
+        public UserRepository(ApplicationDbContext context) {
             _context = context;
         }
 
-        public async Task<IEnumerable<User>> GetAllAsync()
-        {
+        public async Task<IEnumerable<User>> GetAllAsync() {
             return await _context.Users.AsNoTracking().ToListAsync();
         }
 
-        public async Task<User?> GetByIdAsync(int id)
-        {
+        public async Task<User?> GetByIdAsync(int id) {
             return await _context.Users.FindAsync(id);
         }
 
-        public async Task<User> AddAsync(User user)
-        {
+        public async Task<User> AddAsync(User user) {
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
             return user;
         }
 
-        public async Task UpdateAsync(User user)
-        {
+        public async Task UpdateAsync(User user) {
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
-        {
+        public async Task DeleteAsync(int id) {
             var user = await _context.Users.FindAsync(id);
-            if (user != null)
-            {
+            if (user != null) {
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task<IEnumerable<UserRegistration>> GetAllRegisterUserAsync() {
+            return await _context.UserRegistrations.AsNoTracking().ToListAsync();
+        }
+
+        public async Task<UserRegistration> AddRegistrationAsync(UserRegistration registration) {
+            await _context.UserRegistrations.AddAsync(registration);
+            await _context.SaveChangesAsync();
+            return registration;
+        }
+
+        public async Task UpdateRegistrationAsync(UserRegistration registration) {
+            _context.UserRegistrations.Update(registration);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<UserRegistration?> GetByRegistrationIdAsync(int id) {
+            return await _context.UserRegistrations.FindAsync(id);
         }
     }
 }

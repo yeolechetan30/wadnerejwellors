@@ -8,5 +8,10 @@ namespace WadnereJwellors.Business.Services
     {
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
         Task<UserDto> GetUserByIdAsync(int id);
+
+        Task RegisterUserAsync(RegistrationDto register);
+        Task UpdateRegisterUserAsync(RegistrationDto register);
+
+        Task<IEnumerable<RegistrationDto>> GetAllRegisterUsersAsync();
     }
 }

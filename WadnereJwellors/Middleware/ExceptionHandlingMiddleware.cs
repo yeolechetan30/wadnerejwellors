@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WadnereJwellors.Domain.Exceptions;
@@ -56,10 +58,29 @@ namespace WadnereJwellors.Middleware
                     errorResponse.Message = keyNotFoundEx.Message;
                     break;
 
+                case UserAlreadyExistsException userExistsEx:
+                    context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    errorResponse.StatusCode = (int)HttpStatusCode.Conflict;
+                    errorResponse.Message = userExistsEx.Message;
+                    break;
+
                 case ArgumentException argEx:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     errorResponse.StatusCode = (int)HttpStatusCode.BadRequest;
                     errorResponse.Message = argEx.Message;
+                    break;
+
+                case InvalidOperationException invalidOpEx:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    errorResponse.StatusCode = (int)HttpStatusCode.BadRequest;
+                    errorResponse.Message = invalidOpEx.Message;
+                    break;
+
+                case DbUpdateException dbUpdateEx:
+                    context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    errorResponse.StatusCode = (int)HttpStatusCode.Conflict;
+                    errorResponse.Message = "A database constraint error occurred during user registration (e.g. duplicate email address or mobile number).";
+                    errorResponse.Details = _env.IsDevelopment() ? dbUpdateEx.InnerException?.Message ?? dbUpdateEx.Message : null;
                     break;
 
                 case Microsoft.Data.SqlClient.SqlException sqlEx:
