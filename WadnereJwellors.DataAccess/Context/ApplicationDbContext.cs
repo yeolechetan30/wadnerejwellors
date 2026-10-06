@@ -12,6 +12,8 @@ namespace WadnereJwellors.DataAccess.Context
 
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<UserRegistration> UserRegistrations { get; set; } = null!;
+        public DbSet<UserOtp> UserOtps { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +43,21 @@ namespace WadnereJwellors.DataAccess.Context
                 entity.Property(e => e.District).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.State).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Pincode).IsRequired().HasMaxLength(10);
+            });
+
+            modelBuilder.Entity<UserOtp>(entity =>
+            {
+                entity.ToTable("UserOtps");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.OtpCode).IsRequired().HasMaxLength(6);
+                entity.Property(e => e.MobileNumber).IsRequired();
+            });
+
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.ToTable("RefreshTokens");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Token).IsRequired().HasMaxLength(256);
             });
         }
     }

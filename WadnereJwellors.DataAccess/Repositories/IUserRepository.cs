@@ -14,7 +14,18 @@ namespace WadnereJwellors.DataAccess.Repositories
 
         Task<UserRegistration> AddRegistrationAsync(UserRegistration registration);
         Task UpdateRegistrationAsync(UserRegistration registration);
-        Task<UserRegistration> GetByRegistrationIdAsync(int id);
+        Task<UserRegistration?> GetByRegistrationIdAsync(int id);
+        Task<UserRegistration?> GetByMobileNumberAsync(long mobileNumber);
         Task<IEnumerable<UserRegistration>> GetAllRegisterUserAsync();
+
+        // OTP Methods
+        Task SaveOtpAsync(UserOtp otp);
+        Task<UserOtp?> GetValidOtpAsync(long mobileNumber, string otpCode);
+        Task MarkOtpUsedAsync(int otpId);
+
+        // Refresh Token Methods
+        Task SaveRefreshTokenAsync(RefreshToken refreshToken);
+        Task<RefreshToken?> GetRefreshTokenAsync(string token);
+        Task RevokeRefreshTokenAsync(string token);
     }
 }

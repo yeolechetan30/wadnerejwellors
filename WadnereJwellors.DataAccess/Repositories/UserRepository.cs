@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using WadnereJwellors.DataAccess.Context;
@@ -58,6 +60,55 @@ namespace WadnereJwellors.DataAccess.Repositories
 
         public async Task<UserRegistration?> GetByRegistrationIdAsync(int id) {
             return await _context.UserRegistrations.FindAsync(id);
+        }
+
+        public async Task<UserRegistration?> GetByMobileNumberAsync(long mobileNumber) {
+            return await _context.UserRegistrations
+                .FirstOrDefaultAsync(u => u.MobileNumber == mobileNumber);
+        }
+
+        // OTP Methods Implementation
+        public async Task SaveOtpAsync(UserOtp otp) {
+            await _context.UserOtps.AddAsync(otp);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<UserOtp?> GetValidOtpAsync(long mobileNumber, string otpCode) {
+            return await _context.UserOtps
+                .Where(o => o.MobileNumber == mobileNumber 
+                         && o.OtpCode == otpCode 
+                         && !o.IsUsed 
+                         && o.ExpiryTime > DateTime.UtcNow)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task MarkOtpUsedAsync(int otpId) {
+            var otp = await _context.UserOtps.FindAsync(otpId);
+            if (otp != null) {
+                otp.IsUsed = true;
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // Refresh Token Methods Implementation
+        public async Task SaveRefreshTokenAsync(RefreshToken refreshToken) {
+            await _context.RefreshTokens.AddAsync(refreshToken);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<RefreshToken?> GetRefreshTokenAsync(string token) {
+            return await _context.RefreshTokens
+                .Include(r => r.UserRegistration)
+                .FirstOrDefaultAsync(r => r.Token == token && !r.IsRevoked);
+        }
+
+        public async Task RevokeRefreshTokenAsync(string token) {
+            var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token);
+            if (refreshToken != null) {
+                refreshToken.IsRevoked = true;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
