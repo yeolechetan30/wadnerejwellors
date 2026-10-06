@@ -14,6 +14,7 @@ namespace WadnereJwellors.DataAccess.Context
         public DbSet<UserRegistration> UserRegistrations { get; set; } = null!;
         public DbSet<UserOtp> UserOtps { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<GoldSilverRate> GoldSilverRates { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -58,6 +59,12 @@ namespace WadnereJwellors.DataAccess.Context
                 entity.ToTable("RefreshTokens");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Token).IsRequired().HasMaxLength(256);
+            });
+
+            modelBuilder.Entity<GoldSilverRate>(entity =>
+            {
+                entity.ToTable("GoldSilverRates");
+                entity.HasKey(e => e.Id);
             });
         }
     }

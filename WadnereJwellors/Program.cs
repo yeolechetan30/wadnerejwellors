@@ -6,12 +6,16 @@ using Microsoft.OpenApi.Models;
 using WadnereJwellors.Business.Services;
 using WadnereJwellors.DataAccess.Context;
 using WadnereJwellors.DataAccess.Repositories;
+using WadnereJwellors.Business.Hubs;
 using WadnereJwellors.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add SignalR for real-time WebSockets rate broadcasting
+builder.Services.AddSignalR();
 
 // Configure Entity Framework Core with Azure SQL Server
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -28,6 +32,11 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Register Gold & Silver Live Rate Repository, Service & Continuous Background Service
+builder.Services.AddScoped<IGoldRateRepository, GoldRateRepository>();
+builder.Services.AddScoped<IGoldRateService, GoldRateService>();
+builder.Services.AddHostedService<GoldRateBackgroundService>();
 
 // Configure JWT Authentication
 var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "WadnereJwellors_Super_Secret_JWT_Key_2026_Minimum_32_Bytes_Long!";
@@ -89,6 +98,21 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Automatically ensure missing database tables are created on startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        dbContext.Database.EnsureCreated();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while ensuring the database tables exist.");
+    }
+}
+
 // Register Custom Error Handling Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -114,5 +138,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map SignalR Hub for Live Gold Rate WebSockets
+app.MapHub<GoldRateHub>("/hubs/gold-rate");
 
 app.Run();
