@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -155,7 +156,7 @@ namespace WadnereJwellors.Business.Services
                 // Indian retail price includes Import Duty (~12.5%) + GST (3%) + local market premium (~0.3%)
                 // Combined adjustment factor = ~15.8% (configurable via appsettings.json)
                 var adjustmentFactorStr = _configuration["GoldMarketSettings:IndianMarketAdjustmentFactor"];
-                decimal indianMarketFactor = decimal.TryParse(adjustmentFactorStr, out var f) ? f : 1.158m;
+                decimal indianMarketFactor = decimal.TryParse(adjustmentFactorStr, NumberStyles.Number, CultureInfo.InvariantCulture, out var f) ? f : 1.158m;
 
                 gold24K = Math.Round(gold24K * indianMarketFactor, 2);
                 gold22K = Math.Round(gold22K * indianMarketFactor, 2);

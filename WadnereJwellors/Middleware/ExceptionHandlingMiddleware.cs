@@ -94,7 +94,10 @@ namespace WadnereJwellors.Middleware
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     errorResponse.StatusCode = (int)HttpStatusCode.InternalServerError;
                     errorResponse.Message = "An unexpected server error occurred.";
-                    errorResponse.Details = _env.IsDevelopment() ? exception.StackTrace : null;
+                    // In development: expose full stack trace. In production: expose exception type for Azure log correlation.
+                    errorResponse.Details = _env.IsDevelopment()
+                        ? exception.StackTrace
+                        : $"[{exception.GetType().Name}] {exception.Message}";
                     break;
             }
 

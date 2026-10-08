@@ -11,3 +11,7 @@
 /WadnereJwellors.DataAccess/obj
 /WadnereJwellors.Domain/bin/Debug/net8.0
 /WadnereJwellors.Domain/obj
+/WadnereJwellors/bin/Release/net8.0
+/WadnereJwellors.Business/bin/Release/net8.0
+/WadnereJwellors.DataAccess/bin/Release/net8.0
+/WadnereJwellors.Domain/bin/Release/net8.0
