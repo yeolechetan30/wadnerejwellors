@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest
+    runs-on: windows-latest  # Windows runner includes MSDeploy CLI natively
 
     steps:
     - name: Checkout Code
@@ -25,11 +25,14 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Publish Web API
-      run: dotnet publish WadnereJwellors/WadnereJwellors.csproj --configuration Release --output ./publish
+      run: dotnet publish WadnereJwellors/WadnereJwellors.csproj --configuration Release --output ${{ github.workspace }}\publish
 
     - name: Deploy to MonsterASP.NET via WebDeploy
-      uses: Azure/webapps-deploy@v3
+      uses: ChristopheLav/iis-deploy@v1
       with:
-        app-name: 'site97466'
-        publish-profile: ${{ secrets.MONSTERASP_PUBLISH_PROFILE }}
-        package: ./publish
+        website-name: 'site97466'
+        msdeploy-service-url: 'https://site97466.siteasp.net:8172/msdeploy.axd'
+        msdeploy-username: 'site97466'
+        msdeploy-password: 'q#5Y6K!yC+n3'
+        source-path: ${{ github.workspace }}\publish
+        skip-extra-files: false
