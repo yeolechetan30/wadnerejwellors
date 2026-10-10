@@ -1,4 +1,4 @@
-name: Deploy to Azure App Service (Dev)
+name: Deploy to MonsterASP.NET (Dev)
 
 on:
   push:
@@ -7,14 +7,14 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Changed to windows-latest for MSDeploy compatibility
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
     - name: Set up .NET Core
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
@@ -27,9 +27,11 @@ jobs:
     - name: Publish Web API
       run: dotnet publish WadnereJwellors/WadnereJwellors.csproj --configuration Release --output ./publish
 
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
+    - name: Deploy to MonsterASP.NET via WebDeploy
+      uses: Azure/webapps-deploy@v2
       with:
-        app-name: 'wadnere-api-dev'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        app-name: ${{ secrets.WEBSITE_NAME }}
+        publish-url: ${{ secrets.SERVER_COMPUTER_NAME }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        password: ${{ secrets.SERVER_PASSWORD }}
         package: ./publish
