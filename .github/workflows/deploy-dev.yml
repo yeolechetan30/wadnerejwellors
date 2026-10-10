@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest  # Changed to windows-latest for MSDeploy compatibility
+    runs-on: windows-latest
 
     steps:
     - name: Checkout Code
@@ -28,10 +28,8 @@ jobs:
       run: dotnet publish WadnereJwellors/WadnereJwellors.csproj --configuration Release --output ./publish
 
     - name: Deploy to MonsterASP.NET via WebDeploy
-      uses: Azure/webapps-deploy@v2
+      uses: Azure/webapps-deploy@v3
       with:
-        app-name: ${{ secrets.WEBSITE_NAME }}
-        publish-url: ${{ secrets.SERVER_COMPUTER_NAME }}
-        username: ${{ secrets.SERVER_USERNAME }}
-        password: ${{ secrets.SERVER_PASSWORD }}
+        app-name: 'site97466'
+        publish-profile: ${{ secrets.MONSTERASP_PUBLISH_PROFILE }}
         package: ./publish
