@@ -31,6 +31,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Register Gold & Silver Live Rate Repository, Service & Continuous Background Service

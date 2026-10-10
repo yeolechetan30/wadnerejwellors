@@ -20,7 +20,7 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Authenticates user credentials, generates JWT & Refresh token, and sends 6-digit 2FA OTP via WhatsApp.
+        /// Authenticates user credentials, generates JWT & Refresh token, and sends 6-digit 2FA OTP via WhatsApp and registered Email.
         /// </summary>
         /// <param name="request">Mobile number and Password</param>
         [HttpPost("/api/Login")]
@@ -34,7 +34,7 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Verifies the 6-digit OTP sent to user's WhatsApp mobile number for 2-Factor Authentication.
+        /// Verifies the 6-digit OTP sent to user's WhatsApp and registered Email for 2-Factor Authentication.
         /// </summary>
         /// <param name="request">Mobile number and 6-digit OTP code</param>
         [HttpPost("/api/Login/verify-otp")]
@@ -60,7 +60,7 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Resends a 6-digit 2FA OTP code to user's WhatsApp mobile number.
+        /// Resends a 6-digit 2FA OTP code to user's WhatsApp mobile number and registered Email.
         /// </summary>
         /// <param name="mobileNumber">User registered mobile number</param>
         [HttpPost("/api/Login/resend-otp")]
@@ -69,7 +69,7 @@ namespace WadnereJwellors.Controllers
         public async Task<IActionResult> ResendOtp([FromQuery] long mobileNumber)
         {
             await _authService.ResendOtpAsync(mobileNumber);
-            return Ok(new { message = "6-digit 2FA OTP code has been resent to your WhatsApp mobile number." });
+            return Ok(new { message = "6-digit 2FA OTP code has been resent to your WhatsApp mobile number and registered email address." });
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Initiates forgot password process by generating and sending a 6-digit OTP code to user's WhatsApp mobile number.
+        /// Initiates forgot password process by generating and sending a 6-digit OTP code to user's WhatsApp mobile number and registered Email.
         /// </summary>
         /// <param name="request">Mobile number</param>
         [HttpPost("/api/ForgotPassword")]
@@ -96,11 +96,11 @@ namespace WadnereJwellors.Controllers
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
         {
             await _authService.ForgotPasswordAsync(request);
-            return Ok(new { message = "6-digit OTP code has been sent to your WhatsApp mobile number for password reset." });
+            return Ok(new { message = "6-digit OTP code has been sent to your WhatsApp mobile number and registered email address for password reset." });
         }
 
         /// <summary>
-        /// Resets user password after verifying the 6-digit OTP code sent via WhatsApp.
+        /// Resets user password after verifying the 6-digit OTP code sent via WhatsApp / Email.
         /// </summary>
         /// <param name="request">Mobile number, 6-digit OTP code, and new password</param>
         [HttpPost("/api/ResetPassword")]

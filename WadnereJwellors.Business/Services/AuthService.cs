@@ -15,6 +15,7 @@ namespace WadnereJwellors.Business.Services
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IWhatsAppService _whatsAppService;
+        private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
 
         public AuthService(
@@ -22,12 +23,14 @@ namespace WadnereJwellors.Business.Services
             IPasswordHasher passwordHasher,
             IJwtTokenService jwtTokenService,
             IWhatsAppService whatsAppService,
+            IEmailService emailService,
             IConfiguration configuration)
         {
             _userRepository = userRepository;
             _passwordHasher = passwordHasher;
             _jwtTokenService = jwtTokenService;
             _whatsAppService = whatsAppService;
+            _emailService = emailService;
             _configuration = configuration;
         }
 
@@ -68,7 +71,14 @@ namespace WadnereJwellors.Business.Services
             // 3. Send 6-digit OTP to WhatsApp on user's mobile number
             await _whatsAppService.SendOtpViaWhatsAppAsync(user.MobileNumber, otpCode);
 
-            // 4. Generate JWT Access Token & Refresh Token
+            // 4. Send 6-digit OTP to user's registered Email Address if present
+            if (!string.IsNullOrWhiteSpace(user.EmailAddress))
+            {
+                string fullName = $"{user.FirstName} {user.LastName}".Trim();
+                await _emailService.SendOtpEmailAsync(user.EmailAddress, fullName, otpCode, "Login 2FA Verification");
+            }
+
+            // 5. Generate JWT Access Token & Refresh Token
             var (accessToken, expiration) = _jwtTokenService.GenerateAccessToken(user);
             string refreshTokenStr = _jwtTokenService.GenerateRefreshToken();
 
@@ -83,10 +93,14 @@ namespace WadnereJwellors.Business.Services
             };
             await _userRepository.SaveRefreshTokenAsync(refreshTokenEntity);
 
+            string deliveryChannels = !string.IsNullOrWhiteSpace(user.EmailAddress)
+                ? "WhatsApp and your registered email address"
+                : "WhatsApp number";
+
             return new AuthResponseDto
             {
                 Success = true,
-                Message = "Authentication successful. 6-digit 2FA OTP code has been sent to your WhatsApp number.",
+                Message = $"Authentication successful. 6-digit 2FA OTP code has been sent to your {deliveryChannels}.",
                 AccessToken = accessToken,
                 RefreshToken = refreshTokenStr,
                 TokenExpiresAt = expiration,
@@ -235,7 +249,15 @@ namespace WadnereJwellors.Business.Services
             };
             await _userRepository.SaveOtpAsync(userOtp);
 
-            return await _whatsAppService.SendOtpViaWhatsAppAsync(mobileNumber, otpCode);
+            var whatsAppSent = await _whatsAppService.SendOtpViaWhatsAppAsync(mobileNumber, otpCode);
+
+            if (!string.IsNullOrWhiteSpace(user.EmailAddress))
+            {
+                string fullName = $"{user.FirstName} {user.LastName}".Trim();
+                await _emailService.SendOtpEmailAsync(user.EmailAddress, fullName, otpCode, "Login 2FA Verification");
+            }
+
+            return whatsAppSent;
         }
 
         public async Task<bool> UpdatePasswordAsync(UpdatePasswordRequestDto request)
@@ -284,7 +306,15 @@ namespace WadnereJwellors.Business.Services
             };
             await _userRepository.SaveOtpAsync(userOtp);
 
-            return await _whatsAppService.SendOtpViaWhatsAppAsync(user.MobileNumber, otpCode);
+            var whatsAppSent = await _whatsAppService.SendOtpViaWhatsAppAsync(user.MobileNumber, otpCode);
+
+            if (!string.IsNullOrWhiteSpace(user.EmailAddress))
+            {
+                string fullName = $"{user.FirstName} {user.LastName}".Trim();
+                await _emailService.SendOtpEmailAsync(user.EmailAddress, fullName, otpCode, "Password Reset");
+            }
+
+            return whatsAppSent;
         }
 
         public async Task<bool> ResetPasswordAsync(ResetPasswordRequestDto request)
