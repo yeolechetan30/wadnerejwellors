@@ -6,8 +6,7 @@ namespace WadnereJwellors.DataAccess.Context
     public class ApplicationDbContext : DbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
+            : base(options) {
         }
 
         public DbSet<User> Users { get; set; } = null!;
@@ -15,21 +14,19 @@ namespace WadnereJwellors.DataAccess.Context
         public DbSet<UserOtp> UserOtps { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<GoldSilverRate> GoldSilverRates { get; set; } = null!;
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<User>(entity =>
-            {
+            modelBuilder.Entity<User>(entity => {
                 entity.ToTable("Users");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
             });
 
-            modelBuilder.Entity<UserRegistration>(entity =>
-            {
+            modelBuilder.Entity<UserRegistration>(entity => {
                 entity.ToTable("UserRegistration");
                 entity.HasKey(e => e.RegistrationId);
                 entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
@@ -46,23 +43,20 @@ namespace WadnereJwellors.DataAccess.Context
                 entity.Property(e => e.Pincode).IsRequired().HasMaxLength(10);
             });
 
-            modelBuilder.Entity<UserOtp>(entity =>
-            {
+            modelBuilder.Entity<UserOtp>(entity => {
                 entity.ToTable("UserOtps");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.OtpCode).IsRequired().HasMaxLength(6);
                 entity.Property(e => e.MobileNumber).IsRequired();
             });
 
-            modelBuilder.Entity<RefreshToken>(entity =>
-            {
+            modelBuilder.Entity<RefreshToken>(entity => {
                 entity.ToTable("RefreshTokens");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Token).IsRequired().HasMaxLength(256);
             });
 
-            modelBuilder.Entity<GoldSilverRate>(entity =>
-            {
+            modelBuilder.Entity<GoldSilverRate>(entity => {
                 entity.ToTable("GoldSilverRates");
                 entity.HasKey(e => e.Id);
             });
