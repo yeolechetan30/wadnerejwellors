@@ -77,10 +77,10 @@ namespace WadnereJwellors.Middleware
                     break;
 
                 case DbUpdateException dbUpdateEx:
-                    context.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    errorResponse.StatusCode = (int)HttpStatusCode.Conflict;
-                    errorResponse.Message = "A database constraint error occurred during user registration (e.g. duplicate email address or mobile number).";
-                    errorResponse.Details = _env.IsDevelopment() ? dbUpdateEx.InnerException?.Message ?? dbUpdateEx.Message : null;
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    errorResponse.StatusCode = (int)HttpStatusCode.BadRequest;
+                    errorResponse.Message = dbUpdateEx.InnerException?.Message ?? "A database update error occurred.";
+                    errorResponse.Details = _env.IsDevelopment() ? dbUpdateEx.InnerException?.StackTrace ?? dbUpdateEx.StackTrace : null;
                     break;
 
                 case Microsoft.Data.SqlClient.SqlException sqlEx:

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,19 +19,24 @@ namespace WadnereJwellors.Business.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<CashfreePaymentService> _logger;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IEmailService _emailService;
 
         public CashfreePaymentService(
             HttpClient httpClient,
             IConfiguration configuration,
             ILogger<CashfreePaymentService> logger,
-            ApplicationDbContext dbContext) {
+            ApplicationDbContext dbContext,
+            IEmailService emailService)
+        {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
             _dbContext = dbContext;
+            _emailService = emailService;
         }
 
-        public async Task<PaymentOrderResponseDto> CreateOrderAsync(CreatePaymentRequestDto request) {
+        public async Task<PaymentOrderResponseDto> CreateOrderAsync(CreatePaymentRequestDto request)
+        {
             var baseUrl = _configuration["CashfreeSettings:BaseUrl"]?.TrimEnd('/');
             var clientId = _configuration["CashfreeSettings:ClientId"];
             var clientSecret = _configuration["CashfreeSettings:ClientSecret"];
@@ -42,18 +47,21 @@ namespace WadnereJwellors.Business.Services
             string orderId = $"ORDER_{DateTime.UtcNow:yyyyMMddHHmmss}_{RandomNumberGenerator.GetInt32(1000, 9999)}";
             string customerId = request.RegistrationId.HasValue ? $"CUST_{request.RegistrationId}" : $"CUST_{request.CustomerPhone}";
 
-            var payload = new {
+            var payload = new
+            {
                 order_id = orderId,
                 order_amount = request.Amount,
                 order_currency = "INR",
                 order_note = request.OrderNote ?? "Jewellery Purchase",
-                customer_details = new {
+                customer_details = new
+                {
                     customer_id = customerId,
                     customer_name = request.CustomerName,
                     customer_email = request.CustomerEmail,
                     customer_phone = request.CustomerPhone
                 },
-                order_meta = new {
+                order_meta = new
+                {
                     return_url = returnUrl,
                     notify_url = notifyUrl
                 }
@@ -68,7 +76,8 @@ namespace WadnereJwellors.Business.Services
             var response = await _httpClient.SendAsync(httpRequest);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode) {
+            if (!response.IsSuccessStatusCode)
+            {
                 _logger.LogError("[Cashfree] Order creation failed ({StatusCode}): {Response}", response.StatusCode, responseContent);
                 throw new InvalidOperationException($"Cashfree API error: {responseContent}");
             }
@@ -79,7 +88,8 @@ namespace WadnereJwellors.Business.Services
             string? cfOrderId = root.TryGetProperty("cf_order_id", out var cfProp) ? cfProp.ToString() : null;
 
             // Save record in database
-            var transaction = new PaymentTransaction {
+            var transaction = new PaymentTransaction
+            {
                 RegistrationId = request.RegistrationId,
                 OrderId = orderId,
                 CfOrderId = cfOrderId,
@@ -87,12 +97,18 @@ namespace WadnereJwellors.Business.Services
                 Amount = request.Amount,
                 Currency = "INR",
                 Status = "PENDING",
+                CustomerName = request.CustomerName,
+                CustomerEmail = request.CustomerEmail,
+                CustomerPhone = request.CustomerPhone,
+                OrderNote = request.OrderNote,
+                IsEmailSent = false,
                 CreatedAt = DateTime.UtcNow
             };
             _dbContext.Set<PaymentTransaction>().Add(transaction);
             await _dbContext.SaveChangesAsync();
 
-            return new PaymentOrderResponseDto {
+            return new PaymentOrderResponseDto
+            {
                 Success = true,
                 Message = "Cashfree order created successfully.",
                 OrderId = orderId,
@@ -102,7 +118,8 @@ namespace WadnereJwellors.Business.Services
             };
         }
 
-        public async Task<PaymentStatusDto> GetOrderStatusAsync(string orderId) {
+        public async Task<PaymentStatusDto> GetOrderStatusAsync(string orderId)
+        {
             var baseUrl = _configuration["CashfreeSettings:BaseUrl"]?.TrimEnd('/');
             var clientId = _configuration["CashfreeSettings:ClientId"];
             var clientSecret = _configuration["CashfreeSettings:ClientSecret"];
@@ -116,7 +133,8 @@ namespace WadnereJwellors.Business.Services
             var response = await _httpClient.SendAsync(httpRequest);
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode) {
+            if (!response.IsSuccessStatusCode)
+            {
                 throw new InvalidOperationException($"Failed to fetch order status: {responseContent}");
             }
 
@@ -127,20 +145,52 @@ namespace WadnereJwellors.Business.Services
 
             // Update database status
             var transaction = await _dbContext.Set<PaymentTransaction>().FirstOrDefaultAsync(x => x.OrderId == orderId);
-            if (transaction != null) {
+            if (transaction != null)
+            {
                 transaction.Status = orderStatus;
                 transaction.UpdatedAt = DateTime.UtcNow;
+
+                if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
+                    transaction.PaymentCompletionTime ??= DateTime.UtcNow;
+
+                    if (shouldSendEmail)
+                    {
+                        try
+                        {
+                            await _emailService.SendTransactionReceiptEmailAsync(
+                                transaction.CustomerEmail!,
+                                transaction.CustomerName ?? "Valued Customer",
+                                transaction.OrderId,
+                                transaction.Amount,
+                                transaction.Status,
+                                transaction.PaymentMode,
+                                transaction.ReferenceId,
+                                transaction.FailureReason
+                            );
+                            transaction.IsEmailSent = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "[Cashfree] Failed to dispatch transaction email for Order {OrderId}", orderId);
+                        }
+                    }
+                }
+
                 await _dbContext.SaveChangesAsync();
             }
 
-            return new PaymentStatusDto {
+            return new PaymentStatusDto
+            {
                 OrderId = orderId,
                 Status = orderStatus,
                 Amount = amount
             };
         }
 
-        public bool VerifyWebhookSignature(string rawBody, string signature, string timestamp) {
+        public bool VerifyWebhookSignature(string rawBody, string signature, string timestamp)
+        {
             var clientSecret = _configuration["CashfreeSettings:ClientSecret"];
             if (string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(signature)) return false;
 
@@ -153,20 +203,110 @@ namespace WadnereJwellors.Business.Services
             return string.Equals(signature, computedSignature, StringComparison.Ordinal);
         }
 
-        public async Task ProcessWebhookEventAsync(string rawBody) {
+        public async Task ProcessWebhookEventAsync(string rawBody)
+        {
             using var doc = JsonDocument.Parse(rawBody);
             var root = doc.RootElement;
 
-            if (root.TryGetProperty("data", out var data) && data.TryGetProperty("order", out var order)) {
-                string orderId = order.GetProperty("order_id").GetString() ?? string.Empty;
-                string orderStatus = order.GetProperty("order_status").GetString() ?? string.Empty;
+            string eventType = root.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "" : "";
 
-                var transaction = await _dbContext.Set<PaymentTransaction>().FirstOrDefaultAsync(x => x.OrderId == orderId);
-                if (transaction != null) {
-                    transaction.Status = orderStatus;
-                    transaction.UpdatedAt = DateTime.UtcNow;
-                    await _dbContext.SaveChangesAsync();
-                    _logger.LogInformation("[Cashfree Webhook] Updated Order {OrderId} status to {Status}", orderId, orderStatus);
+            if (root.TryGetProperty("data", out var data))
+            {
+                string orderId = string.Empty;
+                string orderStatus = string.Empty;
+                string? paymentMode = null;
+                string? referenceId = null;
+                string? failureReason = null;
+
+                if (data.TryGetProperty("order", out var order))
+                {
+                    orderId = order.TryGetProperty("order_id", out var oId) ? oId.GetString() ?? "" : "";
+                    orderStatus = order.TryGetProperty("order_status", out var oStat) ? oStat.GetString() ?? "" : "";
+                }
+
+                if (data.TryGetProperty("payment", out var payment))
+                {
+                    if (string.IsNullOrEmpty(orderStatus) && payment.TryGetProperty("payment_status", out var pStat))
+                    {
+                        orderStatus = pStat.GetString() ?? "";
+                    }
+                    if (payment.TryGetProperty("payment_group", out var pGrp))
+                    {
+                        paymentMode = pGrp.GetString();
+                    }
+                    if (payment.TryGetProperty("bank_reference", out var bRef))
+                    {
+                        referenceId = bRef.GetString();
+                    }
+                    else if (payment.TryGetProperty("cf_payment_id", out var cfPayId))
+                    {
+                        referenceId = cfPayId.ToString();
+                    }
+                    if (payment.TryGetProperty("payment_message", out var pMsg))
+                    {
+                        failureReason = pMsg.GetString();
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(orderStatus))
+                {
+                    if (eventType.Contains("SUCCESS", StringComparison.OrdinalIgnoreCase) || eventType.Contains("PAID", StringComparison.OrdinalIgnoreCase))
+                    {
+                        orderStatus = "PAID";
+                    }
+                    else if (eventType.Contains("FAILED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        orderStatus = "FAILED";
+                    }
+                    else if (eventType.Contains("DROPPED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        orderStatus = "USER_DROPPED";
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(orderId))
+                {
+                    var transaction = await _dbContext.Set<PaymentTransaction>().FirstOrDefaultAsync(x => x.OrderId == orderId);
+                    if (transaction != null)
+                    {
+                        transaction.Status = orderStatus;
+                        if (!string.IsNullOrEmpty(paymentMode)) transaction.PaymentMode = paymentMode;
+                        if (!string.IsNullOrEmpty(referenceId)) transaction.ReferenceId = referenceId;
+                        if (!string.IsNullOrEmpty(failureReason)) transaction.FailureReason = failureReason;
+                        transaction.UpdatedAt = DateTime.UtcNow;
+
+                        if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+                        {
+                            bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
+                            transaction.PaymentCompletionTime ??= DateTime.UtcNow;
+
+                            if (shouldSendEmail)
+                            {
+                                try
+                                {
+                                    await _emailService.SendTransactionReceiptEmailAsync(
+                                        transaction.CustomerEmail!,
+                                        transaction.CustomerName ?? "Valued Customer",
+                                        transaction.OrderId,
+                                        transaction.Amount,
+                                        transaction.Status,
+                                        transaction.PaymentMode,
+                                        transaction.ReferenceId,
+                                        transaction.FailureReason
+                                    );
+                                    transaction.IsEmailSent = true;
+                                    _logger.LogInformation("[Cashfree Webhook] Transaction receipt email sent to {Email} for Order {OrderId}", transaction.CustomerEmail, transaction.OrderId);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "[Cashfree Webhook] Failed to dispatch transaction email to {Email}", transaction.CustomerEmail);
+                                }
+                            }
+                        }
+
+                        await _dbContext.SaveChangesAsync();
+                        _logger.LogInformation("[Cashfree Webhook] Updated Order {OrderId} status to {Status}", orderId, orderStatus);
+                    }
                 }
             }
         }

@@ -34,7 +34,8 @@ BEGIN
         ReferenceId NVARCHAR(100) NULL,        -- Bank UTR / Cashfree Payment ID
         FailureReason NVARCHAR(500) NULL,      -- Error message if failed
         
-        -- Audit Timestamps
+        -- Audit Timestamps & Flags
+        IsEmailSent BIT NOT NULL CONSTRAINT DF_PaymentTransactions_IsEmailSent DEFAULT 0,
         CreatedAt DATETIME NOT NULL CONSTRAINT DF_PaymentTransactions_CreatedAt DEFAULT GETUTCDATE(),
         PaymentCompletionTime DATETIME NULL,
         UpdatedAt DATETIME NULL,
