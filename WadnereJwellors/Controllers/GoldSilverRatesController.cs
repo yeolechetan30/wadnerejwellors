@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WadnereJwellors.Business.DTOs;
@@ -46,11 +47,15 @@ namespace WadnereJwellors.Controllers
 
         /// <summary>
         /// Manually overrides Gold and Silver rates (Admin function).
+        /// Requires valid JWT Bearer Token with Admin role.
         /// </summary>
         /// <param name="request">New rate values</param>
+        [Authorize(Roles = "Admin")]
         [HttpPost("manual-override")]
         [HttpPost("/api/rates/manual-override")]
         [ProducesResponseType(typeof(GoldSilverRateDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<GoldSilverRateDto>> UpdateManualRates([FromBody] ManualRateUpdateRequestDto request)
         {

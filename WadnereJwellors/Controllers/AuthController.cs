@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WadnereJwellors.Business.DTOs;
@@ -74,10 +75,13 @@ namespace WadnereJwellors.Controllers
 
         /// <summary>
         /// Updates existing user password after verifying current password.
+        /// Requires valid JWT Bearer Token.
         /// </summary>
         /// <param name="request">Mobile number, current password, and new password</param>
+        [Authorize]
         [HttpPost("/api/UpdatePassword")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequestDto request)

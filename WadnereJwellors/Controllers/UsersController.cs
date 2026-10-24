@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WadnereJwellors.Business.DTOs;
@@ -8,6 +9,7 @@ using WadnereJwellors.Models;
 
 namespace WadnereJwellors.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
@@ -41,8 +43,9 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Register User
+        /// Register User (Public endpoint for user signup)
         /// </summary>
+        [AllowAnonymous]
         [HttpPost("/api/Register")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> RegisterUser([FromBody] RegistrationDto register) {
