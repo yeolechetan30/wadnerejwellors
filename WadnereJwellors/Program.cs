@@ -35,6 +35,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICashfreePaymentService, CashfreePaymentService>();
 builder.Services.AddScoped<IMembershipService, MembershipService>();
+builder.Services.AddScoped<IMonthlyPaymentService, MonthlyPaymentService>();
 
 
 // Register Gold & Silver Live Rate Repository, Service & Continuous Background Service
