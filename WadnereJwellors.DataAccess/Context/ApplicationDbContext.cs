@@ -15,6 +15,8 @@ namespace WadnereJwellors.DataAccess.Context
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<GoldSilverRate> GoldSilverRates { get; set; } = null!;
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+        public DbSet<UserMembership> UserMemberships { get; set; } = null!;
+        public DbSet<MonthlyPayment> MonthlyPayments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             base.OnModelCreating(modelBuilder);

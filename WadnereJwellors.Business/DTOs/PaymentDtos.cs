@@ -1,4 +1,4 @@
-﻿namespace WadnereJwellors.Business.DTOs
+namespace WadnereJwellors.Business.DTOs
 {
     public class CreatePaymentRequestDto
     {

@@ -4,12 +4,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using WadnereJwellors.Business.DTOs;
 using WadnereJwellors.DataAccess.Context;
 using WadnereJwellors.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace WadnereJwellors.Business.Services
 {
@@ -176,6 +176,9 @@ namespace WadnereJwellors.Business.Services
                             _logger.LogError(ex, "[Cashfree] Failed to dispatch transaction email for Order {OrderId}", orderId);
                         }
                     }
+
+                    // Fulfill Membership or Monthly Payment
+                    await FulfillPaidOrderAsync(transaction);
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -302,11 +305,78 @@ namespace WadnereJwellors.Business.Services
                                     _logger.LogError(ex, "[Cashfree Webhook] Failed to dispatch transaction email to {Email}", transaction.CustomerEmail);
                                 }
                             }
+
+                            // Fulfill Membership or Monthly Payment
+                            await FulfillPaidOrderAsync(transaction);
                         }
 
                         await _dbContext.SaveChangesAsync();
                         _logger.LogInformation("[Cashfree Webhook] Updated Order {OrderId} status to {Status}", orderId, orderStatus);
                     }
+                }
+            }
+        }
+
+        private async Task FulfillPaidOrderAsync(PaymentTransaction transaction)
+        {
+            if (!transaction.RegistrationId.HasValue)
+            {
+                _logger.LogWarning("[Fulfillment] Cannot fulfill order {OrderId} because RegistrationId is null.", transaction.OrderId);
+                return;
+            }
+
+            // 1. Membership Fulfillment (OrderNote contains "MEMBERSHIP")
+            if (transaction.OrderNote != null && transaction.OrderNote.Contains("MEMBERSHIP", StringComparison.OrdinalIgnoreCase))
+            {
+                bool exists = await _dbContext.UserMemberships.AnyAsync(m => m.PaymentTransactionId == transaction.Id);
+                if (!exists)
+                {
+                    int currentYear = DateTime.UtcNow.Year;
+                    string prefix = $"mem_{currentYear}";
+                    int count = await _dbContext.UserMemberships.CountAsync(m => m.MembershipCode.StartsWith(prefix));
+                    string code = $"{prefix}{(count + 1):D4}";
+
+                    int validityYears = _configuration.GetValue<int>("MembershipSettings:ValidityInYears", 1);
+                    var now = DateTime.UtcNow;
+
+                    var membership = new UserMembership
+                    {
+                        RegistrationId = transaction.RegistrationId.Value,
+                        MembershipCode = code,
+                        Amount = transaction.Amount,
+                        FromDate = now,
+                        ToDate = now.AddYears(validityYears),
+                        IsActive = true,
+                        PaymentTransactionId = transaction.Id,
+                        CreatedDate = now
+                    };
+                    _dbContext.UserMemberships.Add(membership);
+                    await _dbContext.SaveChangesAsync();
+                    _logger.LogInformation("[Fulfillment] Membership {Code} created for user {UserId}", code, transaction.RegistrationId.Value);
+                }
+            }
+            // 2. Monthly Payment Fulfillment (OrderNote contains "MONTHLY")
+            else if (transaction.OrderNote != null && transaction.OrderNote.Contains("MONTHLY", StringComparison.OrdinalIgnoreCase))
+            {
+                bool exists = await _dbContext.MonthlyPayments.AnyAsync(m => m.PaymentTransactionId == transaction.Id);
+                if (!exists)
+                {
+                    var now = DateTime.UtcNow;
+                    var monthlyPayment = new MonthlyPayment
+                    {
+                        RegistrationId = transaction.RegistrationId.Value,
+                        PaymentTransactionId = transaction.Id,
+                        Amount = transaction.Amount,
+                        PaymentDate = now,
+                        PaymentMonth = now.Month,
+                        PaymentYear = now.Year,
+                        MonthYearDisplay = now.ToString("MMMM yyyy"),
+                        IsRedeemed = false,
+                        CreatedDate = now
+                    };
+                    _dbContext.MonthlyPayments.Add(monthlyPayment);
+                    await _dbContext.SaveChangesAsync();
+                    _logger.LogInformation("[Fulfillment] Monthly payment for {Month} created for user {UserId}", monthlyPayment.MonthYearDisplay, transaction.RegistrationId.Value);
                 }
             }
         }

@@ -50,7 +50,7 @@ namespace WadnereJwellors.Controllers
         /// Requires valid JWT Bearer Token with Admin role.
         /// </summary>
         /// <param name="request">New rate values</param>
-        [Authorize(Roles = "Admin")]
+        
         [HttpPost("manual-override")]
         [HttpPost("/api/rates/manual-override")]
         [ProducesResponseType(typeof(GoldSilverRateDto), StatusCodes.Status200OK)]

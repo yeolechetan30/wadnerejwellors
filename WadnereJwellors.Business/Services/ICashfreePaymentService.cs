@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using WadnereJwellors.Business.DTOs;
 
 namespace WadnereJwellors.Business.Services
