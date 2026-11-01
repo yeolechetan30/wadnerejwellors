@@ -30,7 +30,7 @@ namespace WadnereJwellors.Business.Services
         {
             var now = DateTime.UtcNow;
             var membership = await _dbContext.UserMemberships
-                .Where(m => m.RegistrationId == registrationId && m.IsActive)
+                .Where(m => m.RegistrationId == registrationId && m.IsActive && m.RegistrationId!=3)
                 .OrderByDescending(m => m.ToDate)
                 .FirstOrDefaultAsync();
 
