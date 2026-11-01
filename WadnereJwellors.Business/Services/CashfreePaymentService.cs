@@ -280,7 +280,7 @@ namespace WadnereJwellors.Business.Services
 
                         if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
                         {
-                            bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
+                            bool shouldSendEmail = !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                             transaction.PaymentCompletionTime ??= DateTime.UtcNow;
 
                             if (shouldSendEmail)
