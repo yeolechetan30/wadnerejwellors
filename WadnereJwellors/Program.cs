@@ -41,7 +41,7 @@ builder.Services.AddScoped<IMonthlyPaymentService, MonthlyPaymentService>();
 // Register Gold & Silver Live Rate Repository, Service & Continuous Background Service
 builder.Services.AddScoped<IGoldRateRepository, GoldRateRepository>();
 builder.Services.AddScoped<IGoldRateService, GoldRateService>();
-builder.Services.AddHostedService<GoldRateBackgroundService>();
+//builder.Services.AddHostedService<GoldRateBackgroundService>();
 
 // Configure JWT Authentication
 var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "WadnereJwellors_Super_Secret_JWT_Key_2026_Minimum_32_Bytes_Long!";
