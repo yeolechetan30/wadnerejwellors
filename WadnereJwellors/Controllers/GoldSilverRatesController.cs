@@ -21,7 +21,7 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Gets the latest live market rates for Gold (24K, 22K, 18K) and Silver.
+        /// Gets the latest rates for Gold (24K, 22K, 18K) and Silver.
         /// </summary>
         [HttpGet("latest")]
         [HttpGet("/api/rates/latest")]
@@ -33,7 +33,18 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Gets historical live rate logs for trend graphs and charts.
+        /// Manually triggers daily rates refresh from gold-api.com.
+        /// </summary>
+        [HttpPost("refresh-daily-rates")]
+        [ProducesResponseType(typeof(GoldSilverRateDto), StatusCodes.Status200OK)]
+        public async Task<ActionResult<GoldSilverRateDto>> RefreshDailyRates()
+        {
+            var rate = await _goldRateService.FetchAndBroadcastLiveRatesAsync();
+            return Ok(rate);
+        }
+
+        /// <summary>
+        /// Gets historical rate logs for trend graphs and charts.
         /// </summary>
         /// <param name="count">Number of historical rate entries to retrieve (default: 50)</param>
         [HttpGet("history")]
@@ -50,7 +61,6 @@ namespace WadnereJwellors.Controllers
         /// Requires valid JWT Bearer Token with Admin role.
         /// </summary>
         /// <param name="request">New rate values</param>
-        
         [HttpPost("manual-override")]
         [HttpPost("/api/rates/manual-override")]
         [ProducesResponseType(typeof(GoldSilverRateDto), StatusCodes.Status200OK)]
