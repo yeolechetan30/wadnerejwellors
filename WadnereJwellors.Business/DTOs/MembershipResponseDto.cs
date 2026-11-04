@@ -22,5 +22,8 @@ namespace WadnereJwellors.Business.DTOs
         public int ValidityYears { get; set; }
         public bool CanRenew { get; set; }
         public string Message { get; set; } = string.Empty;
+
+        // Customer Registration Details
+        public RegistrationDto? Registration { get; set; }
     }
 }

@@ -30,9 +30,37 @@ namespace WadnereJwellors.Business.Services
         {
             var now = DateTime.UtcNow;
             var membership = await _dbContext.UserMemberships
-                .Where(m => m.RegistrationId == registrationId && m.IsActive && m.RegistrationId!=3)
+                .Where(m => m.RegistrationId == registrationId && m.IsActive)
                 .OrderByDescending(m => m.ToDate)
                 .FirstOrDefaultAsync();
+
+            var userDetails = await _dbContext.UserRegistrations
+                .FirstOrDefaultAsync(m => m.RegistrationId == registrationId);
+
+            RegistrationDto? registrationDto = null;
+            if (userDetails != null)
+            {
+                registrationDto = new RegistrationDto
+                {
+                    RegistrationId = userDetails.RegistrationId,
+                    FirstName = userDetails.FirstName,
+                    LastName = userDetails.LastName,
+                    EmailAddress = userDetails.EmailAddress ?? string.Empty,
+                    MobileNumber = userDetails.MobileNumber,
+                    IsMobileVerified = userDetails.IsMobileVerified,
+                    AddressLine1 = userDetails.AddressLine1,
+                    AddressLine2 = userDetails.AddressLine2 ?? string.Empty,
+                    Village_City = userDetails.Village_City,
+                    Taluka = userDetails.Taluka,
+                    District = userDetails.District,
+                    State = userDetails.State,
+                    Pincode = int.TryParse(userDetails.Pincode, out var pin) ? pin : 0,
+                    DateOfBirth = userDetails.DateOfBirth,
+                    AnniversaryDate = userDetails.AnniversaryDate,
+                    IsActive = userDetails.IsActive,
+                    IsAdmin = userDetails.IsAdmin
+                };
+            }
 
             if (membership != null && membership.FromDate <= now && membership.ToDate >= now)
             {
@@ -44,7 +72,8 @@ namespace WadnereJwellors.Business.Services
                     FromDate = membership.FromDate,
                     ToDate = membership.ToDate,
                     CanRenew = false,
-                    Message = $"Active membership exists until {membership.ToDate:dd-MMM-yyyy}. Renewal not allowed within validity."
+                    Message = $"Active membership exists until {membership.ToDate:dd-MMM-yyyy}. Renewal not allowed within validity.",
+                    Registration = registrationDto
                 };
             }
 
@@ -52,7 +81,8 @@ namespace WadnereJwellors.Business.Services
             {
                 HasActiveMembership = false,
                 CanRenew = true,
-                Message = "No active membership found. Eligible to take membership."
+                Message = "No active membership found. Eligible to take membership.",
+                Registration = registrationDto
             };
         }
 
