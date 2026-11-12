@@ -16,3 +16,4 @@
 /WadnereJwellors.DataAccess/bin/Release/net8.0
 /WadnereJwellors.Domain/bin/Release/net8.0
 /test-payment.html
+**/appsettings.Development.json

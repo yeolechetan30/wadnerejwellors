@@ -147,61 +147,84 @@ namespace WadnereJwellors.Business.Services
             var transaction = await _dbContext.Set<PaymentTransaction>().FirstOrDefaultAsync(x => x.OrderId == orderId);
             if (transaction != null)
             {
-                transaction.Status = orderStatus;
-                transaction.UpdatedAt = DateTime.UtcNow;
+                bool hasSuccessfulPayment = false;
 
-                if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+                // Always query Cashfree payments list to inspect actual transaction attempts & modes
+                try
                 {
-                    // Fetch payment details (PaymentMode, ReferenceId, etc.) from Cashfree payments endpoint
-                    try
+                    using var paymentsRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/orders/{orderId}/payments");
+                    paymentsRequest.Headers.Add("x-client-id", clientId);
+                    paymentsRequest.Headers.Add("x-client-secret", clientSecret);
+                    paymentsRequest.Headers.Add("x-api-version", apiVersion);
+
+                    var paymentsResponse = await _httpClient.SendAsync(paymentsRequest);
+                    if (paymentsResponse.IsSuccessStatusCode)
                     {
-                        using var paymentsRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/orders/{orderId}/payments");
-                        paymentsRequest.Headers.Add("x-client-id", clientId);
-                        paymentsRequest.Headers.Add("x-client-secret", clientSecret);
-                        paymentsRequest.Headers.Add("x-api-version", apiVersion);
-
-                        var paymentsResponse = await _httpClient.SendAsync(paymentsRequest);
-                        if (paymentsResponse.IsSuccessStatusCode)
+                        var paymentsJson = await paymentsResponse.Content.ReadAsStringAsync();
+                        using var paymentsDoc = JsonDocument.Parse(paymentsJson);
+                        if (paymentsDoc.RootElement.ValueKind == JsonValueKind.Array && paymentsDoc.RootElement.GetArrayLength() > 0)
                         {
-                            var paymentsJson = await paymentsResponse.Content.ReadAsStringAsync();
-                            using var paymentsDoc = JsonDocument.Parse(paymentsJson);
-                            if (paymentsDoc.RootElement.ValueKind == JsonValueKind.Array && paymentsDoc.RootElement.GetArrayLength() > 0)
+                            JsonElement selectedPayment = default;
+
+                            foreach (var p in paymentsDoc.RootElement.EnumerateArray())
                             {
-                                JsonElement paymentItem = default;
-                                foreach (var p in paymentsDoc.RootElement.EnumerateArray())
+                                if (p.TryGetProperty("payment_status", out var s) &&
+                                    s.GetString()?.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) == true)
                                 {
-                                    if (p.TryGetProperty("payment_status", out var s) &&
-                                        (s.GetString()?.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) == true))
-                                    {
-                                        paymentItem = p;
-                                        break;
-                                    }
+                                    selectedPayment = p;
+                                    hasSuccessfulPayment = true;
+                                    break;
                                 }
+                            }
 
-                                if (paymentItem.ValueKind == JsonValueKind.Undefined)
-                                {
-                                    paymentItem = paymentsDoc.RootElement[0];
-                                }
+                            if (selectedPayment.ValueKind == JsonValueKind.Undefined)
+                            {
+                                selectedPayment = paymentsDoc.RootElement[0];
+                            }
 
-                                if (paymentItem.TryGetProperty("payment_group", out var pGrp))
+                            // Extract PaymentMode (UPI, card, etc.)
+                            if (selectedPayment.TryGetProperty("payment_group", out var pGrp) && !string.IsNullOrWhiteSpace(pGrp.GetString()))
+                            {
+                                transaction.PaymentMode = pGrp.GetString();
+                            }
+                            else if (selectedPayment.TryGetProperty("payment_method", out var pMethod) && pMethod.ValueKind == JsonValueKind.Object)
+                            {
+                                using var propEnum = pMethod.EnumerateObject();
+                                if (propEnum.MoveNext())
                                 {
-                                    transaction.PaymentMode = pGrp.GetString();
+                                    transaction.PaymentMode = propEnum.Current.Name;
                                 }
-                                if (paymentItem.TryGetProperty("bank_reference", out var bRef))
-                                {
-                                    transaction.ReferenceId = bRef.GetString();
-                                }
-                                else if (paymentItem.TryGetProperty("cf_payment_id", out var cfPayId))
-                                {
-                                    transaction.ReferenceId = cfPayId.ToString();
-                                }
+                            }
+
+                            // Extract ReferenceId
+                            if (selectedPayment.TryGetProperty("bank_reference", out var bRef) && !string.IsNullOrWhiteSpace(bRef.GetString()))
+                            {
+                                transaction.ReferenceId = bRef.GetString();
+                            }
+                            else if (selectedPayment.TryGetProperty("cf_payment_id", out var cfPayId))
+                            {
+                                transaction.ReferenceId = cfPayId.ToString();
+                            }
+
+                            // Capture Failure Reason if available and not successful
+                            if (!hasSuccessfulPayment && selectedPayment.TryGetProperty("payment_message", out var pMsg))
+                            {
+                                transaction.FailureReason = pMsg.GetString();
                             }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "[Cashfree] Could not fetch detailed payments list for order {OrderId}", orderId);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Cashfree] Could not fetch detailed payments list for order {OrderId}", orderId);
+                }
+
+                // If payments list confirmed a SUCCESS payment or root status is PAID/SUCCESS
+                if (hasSuccessfulPayment || orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
+                {
+                    orderStatus = "PAID";
+                    transaction.Status = "PAID";
+                    transaction.UpdatedAt = DateTime.UtcNow;
 
                     bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                     transaction.PaymentCompletionTime ??= DateTime.UtcNow;
@@ -230,6 +253,11 @@ namespace WadnereJwellors.Business.Services
 
                     // Fulfill Membership or Monthly Payment
                     await FulfillPaidOrderAsync(transaction);
+                }
+                else
+                {
+                    transaction.Status = orderStatus;
+                    transaction.UpdatedAt = DateTime.UtcNow;
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -286,9 +314,17 @@ namespace WadnereJwellors.Business.Services
                     {
                         orderStatus = pStat.GetString() ?? "";
                     }
-                    if (payment.TryGetProperty("payment_group", out var pGrp))
+                    if (payment.TryGetProperty("payment_group", out var pGrp) && !string.IsNullOrWhiteSpace(pGrp.GetString()))
                     {
                         paymentMode = pGrp.GetString();
+                    }
+                    else if (payment.TryGetProperty("payment_method", out var pMethod) && pMethod.ValueKind == JsonValueKind.Object)
+                    {
+                        using var propEnum = pMethod.EnumerateObject();
+                        if (propEnum.MoveNext())
+                        {
+                            paymentMode = propEnum.Current.Name;
+                        }
                     }
                     if (payment.TryGetProperty("bank_reference", out var bRef))
                     {

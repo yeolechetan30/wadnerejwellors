@@ -60,13 +60,12 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
-        /// Retrieves the current payment status for an order.
-        /// Requires valid JWT Bearer Token.
+        /// Retrieves the current payment status for an order and synchronizes with Cashfree.
+        /// Can be called with or without authentication (e.g. from payment gateway return/callback URL).
         /// </summary>
-        [Authorize]
+        [AllowAnonymous]
         [HttpGet("status/{orderId}")]
         [ProducesResponseType(typeof(PaymentStatusDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PaymentStatusDto>> GetStatus(string orderId)
         {
