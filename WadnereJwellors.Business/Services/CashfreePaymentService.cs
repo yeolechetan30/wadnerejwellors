@@ -251,16 +251,25 @@ namespace WadnereJwellors.Business.Services
                         }
                     }
 
-                    // Fulfill Membership or Monthly Payment
-                    await FulfillPaidOrderAsync(transaction);
+                    // 1. Save transaction status and payment mode immediately to guarantee persistence
+                    await _dbContext.SaveChangesAsync();
+
+                    // 2. Safely fulfill Membership or Monthly Payment
+                    try
+                    {
+                        await FulfillPaidOrderAsync(transaction);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Fulfillment Error] Failed to fulfill order {OrderId}: {Message}", transaction.OrderId, ex.Message);
+                    }
                 }
                 else
                 {
                     transaction.Status = orderStatus;
                     transaction.UpdatedAt = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
                 }
-
-                await _dbContext.SaveChangesAsync();
             }
 
             return new PaymentStatusDto
@@ -395,11 +404,24 @@ namespace WadnereJwellors.Business.Services
                                 }
                             }
 
-                            // Fulfill Membership or Monthly Payment
-                            await FulfillPaidOrderAsync(transaction);
+                            // 1. Save transaction status and payment mode immediately
+                            await _dbContext.SaveChangesAsync();
+
+                            // 2. Safely fulfill Membership or Monthly Payment
+                            try
+                            {
+                                await FulfillPaidOrderAsync(transaction);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "[Cashfree Webhook] Failed to fulfill order {OrderId}: {Message}", transaction.OrderId, ex.Message);
+                            }
+                        }
+                        else
+                        {
+                            await _dbContext.SaveChangesAsync();
                         }
 
-                        await _dbContext.SaveChangesAsync();
                         _logger.LogInformation("[Cashfree Webhook] Updated Order {OrderId} status to {Status}", orderId, orderStatus);
                     }
                 }
@@ -422,8 +444,18 @@ namespace WadnereJwellors.Business.Services
                 {
                     int currentYear = DateTime.UtcNow.Year;
                     string prefix = $"mem_{currentYear}";
-                    int count = await _dbContext.UserMemberships.CountAsync(m => m.MembershipCode.StartsWith(prefix));
-                    string code = $"{prefix}{(count + 1):D4}";
+                    var latest = await _dbContext.UserMemberships
+                        .Where(m => m.MembershipCode.StartsWith(prefix))
+                        .OrderByDescending(m => m.MembershipCode)
+                        .Select(m => m.MembershipCode)
+                        .FirstOrDefaultAsync();
+
+                    int nextSeq = 1;
+                    if (!string.IsNullOrEmpty(latest) && latest.Length > prefix.Length && int.TryParse(latest.Substring(prefix.Length), out var seq))
+                    {
+                        nextSeq = seq + 1;
+                    }
+                    string code = $"{prefix}{nextSeq:D4}";
 
                     int validityYears = _configuration.GetValue<int>("MembershipSettings:ValidityInYears", 1);
                     var now = DateTime.UtcNow;
