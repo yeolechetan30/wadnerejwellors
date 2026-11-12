@@ -152,6 +152,57 @@ namespace WadnereJwellors.Business.Services
 
                 if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Fetch payment details (PaymentMode, ReferenceId, etc.) from Cashfree payments endpoint
+                    try
+                    {
+                        using var paymentsRequest = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/orders/{orderId}/payments");
+                        paymentsRequest.Headers.Add("x-client-id", clientId);
+                        paymentsRequest.Headers.Add("x-client-secret", clientSecret);
+                        paymentsRequest.Headers.Add("x-api-version", apiVersion);
+
+                        var paymentsResponse = await _httpClient.SendAsync(paymentsRequest);
+                        if (paymentsResponse.IsSuccessStatusCode)
+                        {
+                            var paymentsJson = await paymentsResponse.Content.ReadAsStringAsync();
+                            using var paymentsDoc = JsonDocument.Parse(paymentsJson);
+                            if (paymentsDoc.RootElement.ValueKind == JsonValueKind.Array && paymentsDoc.RootElement.GetArrayLength() > 0)
+                            {
+                                JsonElement paymentItem = default;
+                                foreach (var p in paymentsDoc.RootElement.EnumerateArray())
+                                {
+                                    if (p.TryGetProperty("payment_status", out var s) &&
+                                        (s.GetString()?.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) == true))
+                                    {
+                                        paymentItem = p;
+                                        break;
+                                    }
+                                }
+
+                                if (paymentItem.ValueKind == JsonValueKind.Undefined)
+                                {
+                                    paymentItem = paymentsDoc.RootElement[0];
+                                }
+
+                                if (paymentItem.TryGetProperty("payment_group", out var pGrp))
+                                {
+                                    transaction.PaymentMode = pGrp.GetString();
+                                }
+                                if (paymentItem.TryGetProperty("bank_reference", out var bRef))
+                                {
+                                    transaction.ReferenceId = bRef.GetString();
+                                }
+                                else if (paymentItem.TryGetProperty("cf_payment_id", out var cfPayId))
+                                {
+                                    transaction.ReferenceId = cfPayId.ToString();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[Cashfree] Could not fetch detailed payments list for order {OrderId}", orderId);
+                    }
+
                     bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                     transaction.PaymentCompletionTime ??= DateTime.UtcNow;
 
@@ -188,7 +239,9 @@ namespace WadnereJwellors.Business.Services
             {
                 OrderId = orderId,
                 Status = orderStatus,
-                Amount = amount
+                Amount = amount,
+                PaymentMode = transaction?.PaymentMode,
+                ReferenceId = transaction?.ReferenceId
             };
         }
 
