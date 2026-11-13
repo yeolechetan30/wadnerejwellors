@@ -200,20 +200,6 @@ namespace WadnereJwellors.Controllers
             text-transform: uppercase;
             letter-spacing: 1px;
         }}
-        .btn {{
-            display: inline-block;
-            background-color: #832729;
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            margin-top: 16px;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }}
     </style>
 </head>
 <body>
@@ -241,28 +227,8 @@ namespace WadnereJwellors.Controllers
             </div>
         </div>
 
-        <button type=""button"" class=""btn"" onclick=""returnToApp()"">Back to App</button>
-
         <div class=""brand"">Wadnere Jewellers &bull; Purity & Trust</div>
     </div>
-
-    <script>
-        function returnToApp() {{
-            // 1. If mobile app provides a JS interface, call it
-            if (window.PaymentBridge && window.PaymentBridge.postMessage) {{
-                window.PaymentBridge.postMessage(JSON.stringify({{ orderId: '{status.OrderId}', status: '{status.Status}' }}));
-            }} else if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {{
-                window.flutter_inappwebview.callHandler('paymentCompleted', '{status.OrderId}', '{status.Status}');
-            }}
-            // 2. Attempt custom scheme redirect back to app
-            window.location.href = 'wadnereapp://payment-result?order_id={status.OrderId}&status={status.Status}';
-        }}
-
-        // Optional auto-redirect back to app after 2.5 seconds
-        setTimeout(function() {{
-            returnToApp();
-        }}, 2500);
-    </script>
 </body>
 </html>";
 

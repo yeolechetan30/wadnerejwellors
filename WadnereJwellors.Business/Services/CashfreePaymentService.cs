@@ -47,24 +47,35 @@ namespace WadnereJwellors.Business.Services
             string orderId = $"ORDER_{DateTime.UtcNow:yyyyMMddHHmmss}_{RandomNumberGenerator.GetInt32(1000, 9999)}";
             string customerId = request.RegistrationId.HasValue ? $"CUST_{request.RegistrationId}" : $"CUST_{request.CustomerPhone}";
 
-            var payload = new
+            var orderMeta = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(notifyUrl))
             {
-                order_id = orderId,
-                order_amount = request.Amount,
-                order_currency = "INR",
-                order_note = request.OrderNote ?? "Jewellery Purchase",
-                customer_details = new
+                orderMeta["notify_url"] = notifyUrl;
+            }
+
+            // Only provide return_url if explicitly configured (for Web checkout).
+            // For Mobile SDK (Flutter/Android), return_url should be omitted so SDK closes automatically.
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+            {
+                orderMeta["return_url"] = returnUrl.Contains("{order_id}")
+                    ? returnUrl.Replace("{order_id}", orderId)
+                    : returnUrl;
+            }
+
+            var payload = new Dictionary<string, object>
+            {
+                ["order_id"] = orderId,
+                ["order_amount"] = request.Amount,
+                ["order_currency"] = "INR",
+                ["order_note"] = request.OrderNote ?? "Jewellery Purchase",
+                ["customer_details"] = new
                 {
                     customer_id = customerId,
                     customer_name = request.CustomerName,
                     customer_email = request.CustomerEmail,
                     customer_phone = request.CustomerPhone
                 },
-                order_meta = new
-                {
-                    return_url = returnUrl,
-                    notify_url = notifyUrl
-                }
+                ["order_meta"] = orderMeta
             };
 
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/orders");
