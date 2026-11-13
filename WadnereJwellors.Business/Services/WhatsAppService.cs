@@ -36,12 +36,12 @@ namespace WadnereJwellors.Business.Services
 
                 if (string.IsNullOrWhiteSpace(phoneNumberId)) {
                     _logger.LogError("[Meta WhatsApp Cloud API] Missing 'PhoneNumberId' in appsettings.json.");
-                    throw new InvalidOperationException("WhatsAppSettings:PhoneNumberId is required.");
+                    return false;
                 }
 
                 if (string.IsNullOrWhiteSpace(accessToken)) {
                     _logger.LogError("[Meta WhatsApp Cloud API] Missing 'AccessToken' in appsettings.json.");
-                    throw new InvalidOperationException("WhatsAppSettings:AccessToken is required.");
+                    return false;
                 }
 
                 // 3. Build API Endpoint
@@ -81,7 +81,7 @@ namespace WadnereJwellors.Business.Services
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "[Meta WhatsApp Cloud API] Exception occurred while sending WhatsApp OTP to {MobileNumber}", mobileNumber);
-                throw;
+                return false;
             }
         }
 
@@ -119,7 +119,7 @@ namespace WadnereJwellors.Business.Services
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "[Meta WhatsApp Cloud API] Fallback exception for mobile {Mobile}", formattedMobile);
-                throw;
+                return false;
             }
         }
 
