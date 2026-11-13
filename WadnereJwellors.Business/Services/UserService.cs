@@ -76,18 +76,20 @@ namespace WadnereJwellors.Business.Services
 
         public async Task RegisterUserAsync(RegistrationDto register) {
             var userRegistration = new UserRegistration {
-                FirstName = register.FirstName,
-                LastName = register.LastName,
+                FirstName = register.FirstName ?? string.Empty,
+                LastName = register.LastName ?? string.Empty,
                 EmailAddress = register.EmailAddress,
                 MobileNumber = register.MobileNumber,
                 IsMobileVerified = register.IsMobileVerified,
-                PasswordHash = _passwordHasher.HashPassword(register.PasswordHash),
-                AddressLine1 = register.AddressLine1,
+                PasswordHash = !string.IsNullOrWhiteSpace(register.PasswordHash) 
+                    ? _passwordHasher.HashPassword(register.PasswordHash) 
+                    : string.Empty,
+                AddressLine1 = register.AddressLine1 ?? string.Empty,
                 AddressLine2 = register.AddressLine2,
-                Village_City = register.Village_City,
-                Taluka = register.Taluka,
-                District = register.District,
-                State = register.State,
+                Village_City = register.Village_City ?? string.Empty,
+                Taluka = register.Taluka ?? string.Empty,
+                District = register.District ?? string.Empty,
+                State = register.State ?? "Maharashtra",
                 Pincode = register.Pincode.ToString(),
                 DateOfBirth = register.DateOfBirth,
                 AnniversaryDate = register.AnniversaryDate,
@@ -105,21 +107,51 @@ namespace WadnereJwellors.Business.Services
                 throw new NotFoundException(nameof(UserRegistration), register.RegistrationId);
             }
 
-            existingUser.FirstName = register.FirstName;
-            existingUser.LastName = register.LastName;
-            existingUser.EmailAddress = register.EmailAddress;
+            if (!string.IsNullOrWhiteSpace(register.FirstName))
+                existingUser.FirstName = register.FirstName;
+
+            if (!string.IsNullOrWhiteSpace(register.LastName))
+                existingUser.LastName = register.LastName;
+
+            if (register.EmailAddress != null)
+                existingUser.EmailAddress = register.EmailAddress;
+
             if (register.MobileNumber != 0) {
                 existingUser.MobileNumber = register.MobileNumber;
             }
-            existingUser.AddressLine1 = register.AddressLine1;
-            existingUser.AddressLine2 = register.AddressLine2;
-            existingUser.Village_City = register.Village_City;
-            existingUser.Taluka = register.Taluka;
-            existingUser.District = register.District;
-            existingUser.State = register.State;
-            existingUser.Pincode = register.Pincode.ToString();
-            existingUser.DateOfBirth = register.DateOfBirth;
-            existingUser.AnniversaryDate = register.AnniversaryDate;
+
+            // PasswordHash is NOT mandatory for update. Only update if a new password is provided.
+            if (!string.IsNullOrWhiteSpace(register.PasswordHash)) {
+                existingUser.PasswordHash = _passwordHasher.HashPassword(register.PasswordHash);
+            }
+
+            if (!string.IsNullOrWhiteSpace(register.AddressLine1))
+                existingUser.AddressLine1 = register.AddressLine1;
+
+            if (register.AddressLine2 != null)
+                existingUser.AddressLine2 = register.AddressLine2;
+
+            if (!string.IsNullOrWhiteSpace(register.Village_City))
+                existingUser.Village_City = register.Village_City;
+
+            if (!string.IsNullOrWhiteSpace(register.Taluka))
+                existingUser.Taluka = register.Taluka;
+
+            if (!string.IsNullOrWhiteSpace(register.District))
+                existingUser.District = register.District;
+
+            if (!string.IsNullOrWhiteSpace(register.State))
+                existingUser.State = register.State;
+
+            if (register.Pincode != 0)
+                existingUser.Pincode = register.Pincode.ToString();
+
+            if (register.DateOfBirth.HasValue)
+                existingUser.DateOfBirth = register.DateOfBirth;
+
+            if (register.AnniversaryDate.HasValue)
+                existingUser.AnniversaryDate = register.AnniversaryDate;
+
             existingUser.IsActive = register.IsActive;
             existingUser.IsAdmin = register.IsAdmin;
             existingUser.DateModified = DateTime.UtcNow;

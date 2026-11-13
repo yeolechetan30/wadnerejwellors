@@ -36,5 +36,32 @@ namespace WadnereJwellors.Controllers
             var order = await _membershipService.InitiateMembershipOrderAsync(request);
             return Ok(order);
         }
+
+        /// <summary>
+        /// Records an offline membership payment (cash/cheque). 
+        /// Adds entry directly to UserMemberships with PaymentTransactionId = null.
+        /// </summary>
+        [HttpPost("offline-payment")]
+        public async Task<IActionResult> CreateOfflineMembership([FromBody] OfflineMembershipPaymentDto request)
+        {
+            if (request.RegistrationId <= 0)
+            {
+                return BadRequest(new { message = "Valid RegistrationId is required." });
+            }
+
+            try
+            {
+                var result = await _membershipService.CreateOfflineMembershipAsync(request);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

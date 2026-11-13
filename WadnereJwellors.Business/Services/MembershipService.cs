@@ -154,5 +154,69 @@ namespace WadnereJwellors.Business.Services
 
             return membershipCode;
         }
+
+        public async Task<OfflineMembershipResponseDto> CreateOfflineMembershipAsync(OfflineMembershipPaymentDto request)
+        {
+            var customer = await _dbContext.UserRegistrations
+                .FirstOrDefaultAsync(u => u.RegistrationId == request.RegistrationId);
+
+            if (customer == null)
+            {
+                throw new KeyNotFoundException($"Customer with RegistrationId {request.RegistrationId} does not exist.");
+            }
+
+            var status = await CheckMembershipStatusAsync(request.RegistrationId);
+            if (status.HasActiveMembership && !status.CanRenew)
+            {
+                throw new InvalidOperationException(status.Message);
+            }
+
+            decimal fee = request.Amount ?? _configuration.GetValue<decimal>("MembershipSettings:MembershipFee", 500.00m);
+            var now = DateTime.UtcNow;
+
+            int currentYear = now.Year;
+            string prefix = $"mem_{currentYear}";
+            var latest = await _dbContext.UserMemberships
+                .Where(m => m.MembershipCode.StartsWith(prefix))
+                .OrderByDescending(m => m.MembershipCode)
+                .Select(m => m.MembershipCode)
+                .FirstOrDefaultAsync();
+
+            int nextSeq = 1;
+            if (!string.IsNullOrEmpty(latest) && latest.Length > prefix.Length && int.TryParse(latest.Substring(prefix.Length), out var seq))
+            {
+                nextSeq = seq + 1;
+            }
+            string code = $"{prefix}{nextSeq:D4}";
+
+            int validityYears = _configuration.GetValue<int>("MembershipSettings:ValidityInYears", 1);
+            var toDate = now.AddYears(validityYears);
+
+            var membership = new UserMembership
+            {
+                RegistrationId = request.RegistrationId,
+                MembershipCode = code,
+                Amount = fee,
+                FromDate = now,
+                ToDate = toDate,
+                IsActive = true,
+                PaymentTransactionId = null, // Offline payment: no transaction entry
+                CreatedDate = now
+            };
+
+            _dbContext.UserMemberships.Add(membership);
+            await _dbContext.SaveChangesAsync();
+
+            return new OfflineMembershipResponseDto
+            {
+                Success = true,
+                Message = "Offline membership created successfully.",
+                MembershipCode = code,
+                RegistrationId = request.RegistrationId,
+                Amount = fee,
+                FromDate = now,
+                ToDate = toDate
+            };
+        }
     }
 }

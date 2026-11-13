@@ -76,6 +76,54 @@ namespace WadnereJwellors.Business.Services
             return payment.Id;
         }
 
+        public async Task<OfflineMonthlyPaymentResponseDto> RecordOfflineMonthlyPaymentAsync(OfflineMonthlyPaymentDto request)
+        {
+            var customer = await _dbContext.UserRegistrations
+                .FirstOrDefaultAsync(u => u.RegistrationId == request.RegistrationId);
+
+            if (customer == null)
+            {
+                throw new KeyNotFoundException($"Customer with RegistrationId {request.RegistrationId} not found.");
+            }
+
+            if (request.Amount <= 0)
+            {
+                throw new ArgumentException("Monthly payment amount must be greater than zero.");
+            }
+
+            var now = DateTime.UtcNow;
+
+            var payment = new MonthlyPayment
+            {
+                RegistrationId = request.RegistrationId,
+                PaymentTransactionId = null, // Offline payment: no entry in PaymentTransactions
+                Amount = request.Amount,
+                PaymentDate = now,
+                PaymentMonth = now.Month,
+                PaymentYear = now.Year,
+                MonthYearDisplay = now.ToString("MMMM yyyy"),
+                IsRedeemed = false,
+                RedeemedDate = null,
+                Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? "Offline Payment" : request.Remarks.Trim(),
+                CreatedDate = now
+            };
+
+            _dbContext.MonthlyPayments.Add(payment);
+            await _dbContext.SaveChangesAsync();
+
+            return new OfflineMonthlyPaymentResponseDto
+            {
+                Success = true,
+                Message = "Offline monthly payment recorded successfully.",
+                PaymentId = payment.Id,
+                RegistrationId = request.RegistrationId,
+                Amount = payment.Amount,
+                PaymentDate = now,
+                MonthYearDisplay = payment.MonthYearDisplay,
+                Remarks = payment.Remarks
+            };
+        }
+
         public async Task<UserPassbookResponseDto> GetPassbookAsync(int registrationId)
         {
             var customer = await _dbContext.UserRegistrations

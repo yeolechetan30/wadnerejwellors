@@ -55,6 +55,9 @@ namespace WadnereJwellors.Controllers
 
         [HttpPut("/api/Register")]
         public async Task<IActionResult> UpdateRegisterUser([FromBody] RegistrationDto register) {
+            if (register.RegistrationId <= 0) {
+                return BadRequest(new { message = "Valid RegistrationId is required." });
+            }
             await _userService.UpdateRegisterUserAsync(register);
             return Ok(new { message = "User updated successfully." });
         }

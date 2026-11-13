@@ -7,6 +7,7 @@ namespace WadnereJwellors.Business.Services
     {
         Task<PaymentOrderResponseDto> InitiateMonthlyPaymentOrderAsync(MonthlyPaymentRequestDto request);
         Task<int> RecordSuccessfulPaymentAsync(int registrationId, int transactionId, decimal amount, string? remarks = null);
+        Task<OfflineMonthlyPaymentResponseDto> RecordOfflineMonthlyPaymentAsync(OfflineMonthlyPaymentDto request);
         Task<UserPassbookResponseDto> GetPassbookAsync(int registrationId);
         Task<bool> RedeemMonthlyPaymentAsync(int paymentId);
     }

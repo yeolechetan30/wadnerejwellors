@@ -36,6 +36,38 @@ namespace WadnereJwellors.Controllers
         }
 
         /// <summary>
+        /// Records an offline monthly savings installment payment (cash/cheque).
+        /// Adds entry directly to MonthlyPayments table with PaymentTransactionId = null.
+        /// </summary>
+        [HttpPost("offline-payment")]
+        public async Task<IActionResult> RecordOfflinePayment([FromBody] OfflineMonthlyPaymentDto request)
+        {
+            if (request.RegistrationId <= 0)
+            {
+                return BadRequest(new { message = "Valid RegistrationId is required." });
+            }
+
+            if (request.Amount <= 0)
+            {
+                return BadRequest(new { message = "Amount must be greater than zero." });
+            }
+
+            try
+            {
+                var result = await _monthlyPaymentService.RecordOfflineMonthlyPaymentAsync(request);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Gets the Passbook & financial ledger statement for a customer.
         /// Example: GET /api/monthlypayments/passbook/25
         /// </summary>

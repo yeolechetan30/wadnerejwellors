@@ -8,5 +8,6 @@ namespace WadnereJwellors.Business.Services
         Task<MembershipStatusResponseDto> CheckMembershipStatusAsync(int registrationId);
         Task<PaymentOrderResponseDto> InitiateMembershipOrderAsync(MembershipRequestDto request);
         Task<string> ActivateMembershipAsync(int registrationId, int transactionId, decimal amount);
+        Task<OfflineMembershipResponseDto> CreateOfflineMembershipAsync(OfflineMembershipPaymentDto request);
     }
 }
