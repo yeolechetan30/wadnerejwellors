@@ -222,8 +222,8 @@ namespace WadnereJwellors.Business.Services
                 // If payments list confirmed a SUCCESS payment or root status is PAID/SUCCESS
                 if (hasSuccessfulPayment || orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
                 {
-                    orderStatus = "PAID";
-                    transaction.Status = "PAID";
+                    // Keep the exact status Cashfree returned (SUCCESS or PAID); do not normalise to "PAID"
+                    transaction.Status = orderStatus;
                     transaction.UpdatedAt = DateTime.UtcNow;
                     transaction.FailureReason = null; // Clear any stale failure reason on successful payment
 
@@ -385,7 +385,6 @@ namespace WadnereJwellors.Business.Services
                         {
                             // Clear any stale failure reason on successful payment
                             transaction.FailureReason = null;
-                            transaction.Status = "PAID";
                             bool shouldSendEmail = !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                             transaction.PaymentCompletionTime ??= DateTime.UtcNow;
 
