@@ -40,8 +40,12 @@ namespace WadnereJwellors.Controllers
         /// <summary>
         /// Records an offline membership payment (cash/cheque). 
         /// Adds entry directly to UserMemberships with PaymentTransactionId = null.
+        /// Route: POST /api/Membership/offline-payment or POST /api/Membership/offline
         /// </summary>
+        [AllowAnonymous]
         [HttpPost("offline-payment")]
+        [HttpPost("offline")]
+        [ProducesResponseType(typeof(OfflineMembershipResponseDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> CreateOfflineMembership([FromBody] OfflineMembershipPaymentDto request)
         {
             if (request.RegistrationId <= 0)

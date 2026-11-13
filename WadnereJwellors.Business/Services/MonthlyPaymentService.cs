@@ -91,21 +91,24 @@ namespace WadnereJwellors.Business.Services
                 throw new ArgumentException("Monthly payment amount must be greater than zero.");
             }
 
-            var now = DateTime.UtcNow;
+            var paymentDate = request.PaymentDate ?? DateTime.UtcNow;
+            int month = (request.PaymentMonth >= 1 && request.PaymentMonth <= 12) ? request.PaymentMonth.Value : paymentDate.Month;
+            int year = (request.PaymentYear >= 2000 && request.PaymentYear <= 2100) ? request.PaymentYear.Value : paymentDate.Year;
+            string monthYearDisplay = new DateTime(year, month, 1).ToString("MMMM yyyy");
 
             var payment = new MonthlyPayment
             {
                 RegistrationId = request.RegistrationId,
-                PaymentTransactionId = null, // Offline payment: no entry in PaymentTransactions
+                PaymentTransactionId = null, // Direct offline entry: no entry in PaymentTransactions
                 Amount = request.Amount,
-                PaymentDate = now,
-                PaymentMonth = now.Month,
-                PaymentYear = now.Year,
-                MonthYearDisplay = now.ToString("MMMM yyyy"),
+                PaymentDate = paymentDate,
+                PaymentMonth = month,
+                PaymentYear = year,
+                MonthYearDisplay = monthYearDisplay,
                 IsRedeemed = false,
                 RedeemedDate = null,
-                Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? "Offline Payment" : request.Remarks.Trim(),
-                CreatedDate = now
+                Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? "Offline Cash Payment" : request.Remarks.Trim(),
+                CreatedDate = DateTime.UtcNow
             };
 
             _dbContext.MonthlyPayments.Add(payment);
@@ -117,8 +120,11 @@ namespace WadnereJwellors.Business.Services
                 Message = "Offline monthly payment recorded successfully.",
                 PaymentId = payment.Id,
                 RegistrationId = request.RegistrationId,
+                CustomerName = $"{customer.FirstName} {customer.LastName}".Trim(),
                 Amount = payment.Amount,
-                PaymentDate = now,
+                PaymentDate = payment.PaymentDate,
+                PaymentMonth = payment.PaymentMonth,
+                PaymentYear = payment.PaymentYear,
                 MonthYearDisplay = payment.MonthYearDisplay,
                 Remarks = payment.Remarks
             };

@@ -38,8 +38,12 @@ namespace WadnereJwellors.Controllers
         /// <summary>
         /// Records an offline monthly savings installment payment (cash/cheque).
         /// Adds entry directly to MonthlyPayments table with PaymentTransactionId = null.
+        /// Route: POST /api/MonthlyPayments/offline-payment or POST /api/MonthlyPayments/offline
         /// </summary>
+        [AllowAnonymous]
         [HttpPost("offline-payment")]
+        [HttpPost("offline")]
+        [ProducesResponseType(typeof(OfflineMonthlyPaymentResponseDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> RecordOfflinePayment([FromBody] OfflineMonthlyPaymentDto request)
         {
             if (request.RegistrationId <= 0)

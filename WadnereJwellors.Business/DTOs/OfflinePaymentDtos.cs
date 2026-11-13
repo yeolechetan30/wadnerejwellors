@@ -24,6 +24,9 @@ namespace WadnereJwellors.Business.DTOs
     {
         public int RegistrationId { get; set; }
         public decimal Amount { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public int? PaymentMonth { get; set; }
+        public int? PaymentYear { get; set; }
         public string? Remarks { get; set; }
     }
 
@@ -33,8 +36,11 @@ namespace WadnereJwellors.Business.DTOs
         public string Message { get; set; } = string.Empty;
         public int PaymentId { get; set; }
         public int RegistrationId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public DateTime PaymentDate { get; set; }
+        public int PaymentMonth { get; set; }
+        public int PaymentYear { get; set; }
         public string MonthYearDisplay { get; set; } = string.Empty;
         public string? Remarks { get; set; }
     }
