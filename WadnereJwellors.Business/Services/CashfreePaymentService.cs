@@ -225,6 +225,7 @@ namespace WadnereJwellors.Business.Services
                     orderStatus = "PAID";
                     transaction.Status = "PAID";
                     transaction.UpdatedAt = DateTime.UtcNow;
+                    transaction.FailureReason = null; // Clear any stale failure reason on successful payment
 
                     bool shouldSendEmail = transaction.PaymentCompletionTime == null && !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                     transaction.PaymentCompletionTime ??= DateTime.UtcNow;
@@ -335,7 +336,7 @@ namespace WadnereJwellors.Business.Services
                             paymentMode = propEnum.Current.Name;
                         }
                     }
-                    if (payment.TryGetProperty("bank_reference", out var bRef))
+                    if (payment.TryGetProperty("bank_reference", out var bRef) && !string.IsNullOrWhiteSpace(bRef.GetString()))
                     {
                         referenceId = bRef.GetString();
                     }
@@ -343,7 +344,12 @@ namespace WadnereJwellors.Business.Services
                     {
                         referenceId = cfPayId.ToString();
                     }
-                    if (payment.TryGetProperty("payment_message", out var pMsg))
+
+                    // Only store payment_message as FailureReason if payment actually FAILED
+                    if (payment.TryGetProperty("payment_status", out var pmStatus) &&
+                        !pmStatus.GetString()!.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase) &&
+                        payment.TryGetProperty("payment_message", out var pMsg) &&
+                        !string.IsNullOrWhiteSpace(pMsg.GetString()))
                     {
                         failureReason = pMsg.GetString();
                     }
@@ -373,11 +379,13 @@ namespace WadnereJwellors.Business.Services
                         transaction.Status = orderStatus;
                         if (!string.IsNullOrEmpty(paymentMode)) transaction.PaymentMode = paymentMode;
                         if (!string.IsNullOrEmpty(referenceId)) transaction.ReferenceId = referenceId;
-                        if (!string.IsNullOrEmpty(failureReason)) transaction.FailureReason = failureReason;
                         transaction.UpdatedAt = DateTime.UtcNow;
 
                         if (orderStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase) || orderStatus.Equals("SUCCESS", StringComparison.OrdinalIgnoreCase))
                         {
+                            // Clear any stale failure reason on successful payment
+                            transaction.FailureReason = null;
+                            transaction.Status = "PAID";
                             bool shouldSendEmail = !string.IsNullOrWhiteSpace(transaction.CustomerEmail);
                             transaction.PaymentCompletionTime ??= DateTime.UtcNow;
 
